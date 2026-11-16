@@ -3,33 +3,51 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// View Engine olarak EJS kullanıyoruz (HTML dosyalarını dinamik okumak için)
-app.set('view engine', 'ejs');
+// View Engine olarak EJS ve .html desteği
+app.set('view engine', 'html');
 app.engine('html', require('ejs').renderFile);
-app.set('views', path.join(__dirname, 'Website/Views'));
 
-// Statik dosyalar (CSS, JS, resimler) için klasör tanımı
+// Views ve Public (Statik) klasör yolları
+app.set('views', path.join(__dirname, 'Website/Views'));
 app.use(express.static(path.join(__dirname, 'Website/wwwroot')));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 1. Ana Sayfa (Home / Login / Landing)
+// Güvenli render yardımcı fonksiyonu (Pages klasöründe mi yoksa ana Views içinde mi kontrol eder)
+const renderPage = (res, pageName, data = {}) => {
+    res.render(`Pages/${pageName}`, data, (err, html) => {
+        if (err) {
+            // Eğer Pages altındat değilse doğrudan aramayı dener
+            res.render(pageName, data, (innerErr, innerHtml) => {
+                if (innerErr) {
+                    res.status(404).send(`<!DOCTYPE html><html><body><h1>Sayfa Bulunamadı: ${pageName}</h1><p>${err.message}</p></body></html>`);
+                } else {
+                    res.send(innerHtml);
+                }
+            });
+        } else {
+            res.send(html);
+        }
+    });
+};
+
+// 1. Ana Sayfa (Landing / Login / Signup)
 app.get('/', (req, res) => {
-    res.render('Pages/home.html', { 
+    renderPage(res, 'index', { 
         userIdStr: '0', 
         userName: 'Guest', 
         useBundledAssets: true 
     });
 });
 
-// 2. Arama ve Yönlendirme Kontrolü (Bahsettiğin keyword mantığı)
+// 2. Oyunlar Sayfası ve Arama / Keyword Yönlendirmesi
 app.get('/games', (req, res) => {
     const keyword = req.query.keyword || req.query.Keyword;
     if (keyword) {
         return res.redirect(`/games/Search?keyword=${encodeURIComponent(keyword)}`);
     }
-    res.render('Pages/games.html', { 
+    renderPage(res, 'games', { 
         userIdStr: '0', 
         userName: 'Guest', 
         useBundledAssets: true 
@@ -38,10 +56,10 @@ app.get('/games', (req, res) => {
 
 app.get('/games/Search', (req, res) => {
     const keyword = req.query.keyword || '';
-    res.send(`<!DOCTYPE html><html><body><h1>Arama Sonucu: ${keyword}</h1></body></html>`);
+    res.send(`<!DOCTYPE html><html><body style="font-family: Arial; padding: 20px;"><h1>Arama Sonucu</h1><p>Aranan kelime: <strong>${keyword}</strong></p></body></html>`);
 });
 
-// 3. Geliştirici / Create Sayfası (Develop Tab)
+// 3. Geliştirici / Create Sayfası (Develop Tab & Parametre Yönetimi)
 app.get('/develop', (req, res) => {
     let viewParam = req.query.view || req.query.View || '';
     let pageParam = req.query.Page || req.query.page || '';
@@ -54,7 +72,7 @@ app.get('/develop', (req, res) => {
         }
     }
 
-    res.render('Pages/download.html', {
+    renderPage(res, 'download', {
         userIdStr: '0',
         userName: 'Guest',
         useBundledAssets: true,
@@ -63,7 +81,17 @@ app.get('/develop', (req, res) => {
     });
 });
 
+// 4. Genel Sayfa Yönlendiricisi (Diğer tüm .html istekleri için esnek fallback)
+app.get('/:page', (req, res) => {
+    const page = req.params.page;
+    renderPage(res, page, { 
+        userIdStr: '0', 
+        userName: 'Guest', 
+        useBundledAssets: true 
+    });
+});
+
 // Sunucuyu Başlat
 app.listen(PORT, () => {
-    console.log(`[*] Roblox 2016 Web Server ${PORT} portunda aktif!`);
+    console.log(`[*] Gelişmiş Roblox 2016 Web Server ${PORT} portunda aktif!`);
 });
