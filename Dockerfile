@@ -2,11 +2,11 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Bütün proje dosyalarını tek hamlede çalışma dizinine kopyalıyoruz
+# Bütün proje dosyalarını çalışma dizinine kopyalıyoruz
 COPY . .
 
-# Projeyi Release modunda derleyip yayınlıyoruz (Publish)
-RUN dotnet publish -c Release -o /app/publish
+# Windows'a özel (Control Panel gibi) projelerin Linux'ta hata vermemesi için özel parametre ekliyoruz
+RUN dotnet publish -c Release -o /app/publish -p:EnableWindowsTargeting=true
 
 # 2. Aşama: Çalıştırma (Runtime) Ortamı
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
