@@ -92,8 +92,8 @@ builder.Services.AddSingleton<Website.Services.DevelopTabService>();
 builder.Services.AddSingleton<ScriptTemplateService>();
 builder.Services.AddSingleton<XMLTemplateService>();
 builder.Services.AddSingleton<AssetMetadataRepository>();
-            builder.Services.AddSingleton<ToolboxService>();
-            builder.Services.AddSingleton<Website.Services.EmailSender>();
+builder.Services.AddSingleton<ToolboxService>();
+builder.Services.AddSingleton<Website.Services.EmailSender>();
 builder.Services.AddHostedService<ToolboxService>(sp => sp.GetRequiredService<ToolboxService>());
 builder.Services.AddMemoryCache();
 builder.Services.Configure<RateLimitOptions>(builder.Configuration.GetSection("RateLimit"));
@@ -165,18 +165,13 @@ if (enableRequestLogging)
     });
 }
 
-
-
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
-    {
-        app.UseExceptionHandler("/Home/Error");
-        app.UseHsts();
-    }
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
 }
 
 app.UseForwardedHeaders();
@@ -220,10 +215,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// Decompress gzip-encoded request bodies (RCC game-server callbacks) before any middleware reads the body
 app.UseRequestDecompression();
- 
-// Commented out HTTPS redirection to allow HTTP for development
 
 // app.UseHttpsRedirection();
 
@@ -231,7 +223,6 @@ app.UseWebSockets();
 
 app.UseWebOptimizer();
 
-// Add CORS for UWP WebView support
 app.UseCors("AllowAll");
 
 var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
@@ -258,7 +249,6 @@ app.UseMiddleware<LockdownMiddleware>();
 app.UseWebMarkupMin();
 
 app.UseRouting();
-
 
 app.UseWhen(
     context => !context.Request.Path.StartsWithSegments("/hubs"),
@@ -309,8 +299,9 @@ app.Use(async (context, next) =>
     }
     await next();
 });
+
 if (enableRequestLogging)
-app.UseMiddleware<RequestResponseLoggingMiddleware>();
+    app.UseMiddleware<RequestResponseLoggingMiddleware>();
 
 app.UseMiddleware<PresenceMiddleware>();
 
@@ -326,15 +317,15 @@ app.MapControllers();
 
 app.MapHub<NotificationHub>("/hubs/notifications");
 
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+// Önce standart controller ve action'lar eşleşmeli
+app.MapDefaultControllerRoute();
 
+// Dinamik sayfa yönlendirmesini en alta alıyoruz ki ana sayfa ve API'ler ezilmesin
 app.MapControllerRoute(
     name: "pages",
     pattern: "{*path}",
     defaults: new { controller = "Pages", action = "Route" },
-    constraints: new { path = @"^(?!.*\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map|gz|download|html)$).*" }
+    constraints: new { path = @"^(?!.*\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map|gz|download|html|hubs).*$).*" }
 );
 
 app.Run();
