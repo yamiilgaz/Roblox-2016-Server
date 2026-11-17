@@ -2,22 +2,21 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Bütün proje dosyalarını çalışma dizinine kopyalıyoruz
 COPY . .
-
-# DİKKAT: Sadece "Website" klasörünü derliyoruz. Control Panel'i tamamen es geçiyoruz!
 RUN dotnet publish Website/ -c Release -o /app/publish
 
 # 2. Aşama: Çalıştırma (Runtime) Ortamı
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+
+# Exit Code 139'u çözmek için gereken temel Linux grafik ve C kütüphanelerini yüklüyoruz
+RUN apt-get update && apt-get install -y libgdiplus libc6-dev libsqlite3-0 fontconfig
+
 WORKDIR /app
 EXPOSE 80
 
-# Derlenen web çıktılarını çalışma ortamına taşıyoruz
 COPY --from=build /app/publish .
 
-# Render'ın atadığı dinamik portu ASP.NET Core'a tanıtıyoruz
 ENV ASPNETCORE_URLS=http://+:$PORT
 
-# Loglarda gördüğümüz doğru DLL adıyla sunucuyu başlatıyoruz
+# Uygulamayı başlatıyoruz
 ENTRYPOINT ["dotnet", "RobloxWebserver.dll"]
